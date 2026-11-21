@@ -18,6 +18,7 @@ import repairRoutes from './routes/repairRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import warrantyRoutes from './routes/warrantyRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
+import chatRoutes from './routes/chatRoutes.js';
 
 // Fail fast with a clear message instead of crashing later with a confusing one.
 const missing = ['MONGO_URI', 'JWT_SECRET'].filter((k) => !process.env[k]);
@@ -27,6 +28,10 @@ if (missing.length) {
 }
 
 const app = express();
+
+// Behind a hosting proxy (Render, Railway...) the real client IP is in X-Forwarded-For.
+// Needed so rate limiting counts each visitor separately.
+if (process.env.NODE_ENV === 'production') app.set('trust proxy', 1);
 
 app.use(
   helmet({
@@ -82,6 +87,7 @@ app.use('/api/repairs', repairRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/warranty', warrantyRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/chat', chatRoutes);
 
 // Health check
 const health = (req, res) => res.json({ status: 'ok', service: 'Voltora API' });
@@ -102,7 +108,7 @@ app.use((err, req, res, next) => {
   if (err instanceof multer.MulterError) {
     status = 400;
     message = err.code === 'LIMIT_FILE_SIZE' ? 'Image is too large (max 5MB)' : err.message;
-  } else if (status >= 500) {
+  } else if (status >= 500 && !err.expose) {
     console.error(err);
     message = 'Server error';
   }

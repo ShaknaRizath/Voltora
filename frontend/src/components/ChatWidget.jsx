@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import { AnimatePresence, motion } from "framer-motion";
 import { FiMessageCircle, FiSend, FiX, FiZap } from "react-icons/fi";
+import { API_URL } from "../config";
 
 const SUGGESTIONS = ["Which laptop is best for gaming?", "How do repairs work?", "How do I check my warranty?"];
 
@@ -11,7 +12,6 @@ export default function ChatWidget() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const endRef = useRef(null);
-  const apiKey = import.meta.env.VITE_GROQ_API_KEY;
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -26,32 +26,13 @@ export default function ChatWidget() {
     setLoading(true);
 
     try {
-      const res = await axios.post(
-        "https://api.groq.com/openai/v1/chat/completions",
-        {
-          model: "openai/gpt-oss-20b",
-          messages: [
-            {
-              role: "system",
-              content:
-                "You are a friendly assistant for a website called Voltora. Only answer simple general greetings or questions about mobiles, laptops, accessories, repair, warranty, and services. If asked about anything else, respond with: 'I'm here to assist only with Voltora's electronics and services 😊'. Keep answers short and plain.",
-            },
-            { role: "user", content },
-          ],
-          temperature: 0.7,
-        },
-        { headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" } }
-      );
-      const reply = res.data.choices[0].message.content;
-      setMessages((prev) => [...prev, { text: reply, sender: "bot" }]);
+      const res = await axios.post(`${API_URL}/api/chat`, { message: content });
+      setMessages((prev) => [...prev, { text: res.data.reply, sender: "bot" }]);
     } catch (err) {
-      console.error("Groq API error:", err.response?.data || err.message);
       setMessages((prev) => [
         ...prev,
         {
-          text:
-            "Sorry, I couldn't reach the assistant. " +
-            (err.response?.data?.error?.message || err.message || ""),
+          text: err.response?.data?.message || "Sorry, I couldn't reach the assistant. Please try again.",
           sender: "bot",
           error: true,
         },

@@ -110,9 +110,11 @@ Backend (`backend/.env`):
 | `JWT_SECRET` | Long random string used to sign tokens |
 | `CLIENT_URL` | Frontend address allowed to call the API |
 | `STRIPE_SECRET_KEY` | Stripe test secret key (checkout reports a clear message without it) |
-| `SMTP_*` | Email settings for reset codes (optional, codes print in the server console if empty) |
+| `SMTP_*` | Email settings for sign-up and reset codes (optional locally, codes print in the server console if empty) |
+| `GROQ_API_KEY` | Key for the chat assistant, kept on the server |
+| `CLOUDINARY_URL` | Photo storage for production (optional locally, files go to `uploads/`) |
 
-Frontend (`frontend/.env`): `VITE_API_URL`, `VITE_STRIPE_PUBLISABLE_KEY`, `VITE_GROQ_API_KEY`. Variables starting with `VITE_` are public in the built site, so only use test or low-risk keys there.
+Frontend (`frontend/.env`): `VITE_API_URL` and `VITE_STRIPE_PUBLISABLE_KEY`. Variables starting with `VITE_` are public in the built site, so only put publishable keys there.
 
 Never commit real `.env` files. They are git-ignored.
 
@@ -126,6 +128,10 @@ Never commit real `.env` files. They are git-ignored.
 | Repairs | `/api/repairs` |
 | Warranties | `/api/warranty` |
 | Admin (admin role only) | `/api/admin` |
+
+## Deploying
+
+Step-by-step guide for MongoDB Atlas, Cloudinary, Render and Vercel: [docs/DEPLOY.md](docs/DEPLOY.md).
 
 ## What I learned
 

@@ -10,12 +10,12 @@ import {
   FiTool,
 } from "react-icons/fi";
 
-import phone from "../assets/uploads/products/Iphone-18-pro-max.png";
-import laptop from "../assets/uploads/products/macbook-air-m4.png";
-import airpods from "../assets/uploads/products/apple-airpods-max.png";
-import samsung from "../assets/uploads/products/samsung-s-pen.png";
-import rog from "../assets/uploads/products/ROG-strix-scar-16.png";
-import bengo from "../assets/uploads/products/bengoo-g9000.png";
+const phone = "/products/Iphone-18-pro-max.png";
+const laptop = "/products/macbook-air-m4.png";
+const airpods = "/products/apple-airpods-max.png";
+const samsung = "/products/samsung-s-pen.png";
+const rog = "/products/ROG-strix-scar-16.png";
+const bengo = "/products/bengoo-g9000.png";
 
 const categories = [
   { title: "Mobiles", hash: "mobile", img: phone, blurb: "iPhone, Samsung, Oppo" },
@@ -74,7 +74,7 @@ export default function Start() {
         <div className="container-page grid items-center gap-12 pb-16 pt-14 lg:grid-cols-2 lg:pb-24 lg:pt-24">
           <div className="animate-fade-up">
             <span className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-brand-700 shadow-soft ring-1 ring-brand-100">
-              <FiCpu className="h-3.5 w-3.5" /> New: 2025 flagships now in stock
+              <FiCpu className="h-3.5 w-3.5" /> New arrivals now in stock
             </span>
             <h1 className="mt-6 text-5xl font-extrabold leading-[1.05] text-zinc-900 sm:text-6xl">
               Smart tech,

@@ -1,5 +1,6 @@
-// Seed data. Images are served by the Vite dev server from frontend/src/assets/uploads/products.
-const img = (file) => `/src/assets/uploads/products/${encodeURIComponent(file)}`;
+// Seed data. Images are static files in frontend/public/products, so they work in development
+// and on any static host (Vercel) with no backend involved.
+const img = (file) => `/products/${encodeURIComponent(file)}`;
 
 const products = [
   // ---- Mobiles ----
