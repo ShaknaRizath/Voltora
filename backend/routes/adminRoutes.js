@@ -4,6 +4,7 @@ import { validateObjectId } from '../middleware/validate.js';
 import upload from '../middleware/uploadMiddleware.js';
 import {
   getStats,
+  getCounts,
   listAllOrders,
   setDelivered,
   listUsers,
@@ -21,6 +22,7 @@ const router = express.Router();
 router.use(verifyToken, isAdmin);
 router.param('id', validateObjectId);
 
+router.get('/counts', getCounts);
 router.get('/stats', getStats);
 
 router.get('/orders', listAllOrders);

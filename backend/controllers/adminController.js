@@ -7,6 +7,7 @@ import Repair from '../models/Repair.js';
 import Warranty from '../models/Warranty.js';
 import { publicPath } from '../middleware/uploadMiddleware.js';
 import { moveProduct } from '../utils/productOrder.js';
+import { notifyOrderDelivered } from '../utils/notify.js';
 
 const TZ = 'Asia/Colombo';
 const dayKey = (d) => new Date(d).toLocaleDateString('en-CA', { timeZone: TZ }); // YYYY-MM-DD
@@ -14,6 +15,19 @@ const dayKey = (d) => new Date(d).toLocaleDateString('en-CA', { timeZone: TZ });
 const warrantyStatus = (w) => {
   const msLeft = new Date(w.expiresAt).getTime() - Date.now();
   return { status: msLeft > 0 ? 'active' : 'expired', daysRemaining: Math.max(0, Math.ceil(msLeft / 86_400_000)) };
+};
+
+// GET /api/admin/counts   (small and cheap: polled by the header badges)
+export const getCounts = async (_req, res, next) => {
+  try {
+    const [pendingRepairs, toDeliver] = await Promise.all([
+      Repair.countDocuments({ status: 'Pending' }),
+      Order.countDocuments({ isPaid: true, isDelivered: false }),
+    ]);
+    res.json({ pendingRepairs, toDeliver });
+  } catch (error) {
+    next(error);
+  }
 };
 
 // GET /api/admin/stats
@@ -114,12 +128,14 @@ export const listAllOrders = async (req, res, next) => {
 export const setDelivered = async (req, res, next) => {
   try {
     const delivered = req.body.delivered === true || req.body.delivered === 'true';
+    const before = await Order.findOne({ _id: req.params.id, isPaid: true }, 'isDelivered');
     const order = await Order.findOneAndUpdate(
       { _id: req.params.id, isPaid: true },
       { isDelivered: delivered, deliveredAt: delivered ? new Date() : undefined },
       { new: true }
     );
     if (!order) return res.status(404).json({ message: 'Paid order not found' });
+    if (delivered && !before?.isDelivered) await notifyOrderDelivered(order);
     res.json(order);
   } catch (error) {
     next(error);

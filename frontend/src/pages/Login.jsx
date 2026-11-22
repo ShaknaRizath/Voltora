@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import axios from "axios";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { FiAtSign, FiLock } from "react-icons/fi";
 import { API_URL } from "../config";
 import AuthShell from "../components/AuthShell";
@@ -9,7 +9,12 @@ import { Alert, Field, Spinner, Stepper } from "../components/ui";
 
 const steps = ["Identify", "Authenticate"];
 
+// Only allow redirects to pages on this site.
+const safePath = (p) => (typeof p === "string" && p.startsWith("/") && !p.startsWith("//") ? p : null);
+
 export default function Login() {
+  const location = useLocation();
+  const backTo = safePath(location.state?.from); // e.g. "/cart", set by pages that asked the user to sign in
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [profileImage, setProfileImage] = useState("");
@@ -61,7 +66,7 @@ export default function Login() {
           profileImage: res.data.profileImage || profileImage,
         })
       );
-      window.location.href = "/dashboard";
+      window.location.href = backTo || "/dashboard";
     } catch (err) {
       console.error(err.response?.data || err.message);
       localStorage.removeItem("token");
@@ -85,7 +90,7 @@ export default function Login() {
       footer={
         <>
           New to Voltora?{" "}
-          <Link to="/register" className="font-semibold text-brand-600 hover:text-brand-700">
+          <Link to="/register" state={location.state} className="font-semibold text-brand-600 hover:text-brand-700">
             Create an account
           </Link>
         </>

@@ -1,6 +1,7 @@
 import Order from "../models/orderModel.js";
 import { getStripe, isStripeConfigured } from "../utils/stripe.js";
 import { createWarrantiesForOrder } from "./warrantyController.js";
+import { notifyOrderDelivered } from "../utils/notify.js";
 
 // Idempotent: safe to call from both the webhook and the success-page confirmation.
 export const markOrderPaid = async (stripeSessionId) => {
@@ -74,12 +75,14 @@ export const confirmCheckout = async (req, res, next) => {
 // PATCH /api/orders/:id/deliver  (admin)
 export const markDelivered = async (req, res, next) => {
   try {
+    const before = await Order.findOne({ _id: req.params.id, isPaid: true }, "isDelivered");
     const order = await Order.findOneAndUpdate(
       { _id: req.params.id, isPaid: true },
       { isDelivered: true, deliveredAt: new Date() },
       { new: true }
     );
     if (!order) return res.status(404).json({ message: "Paid order not found" });
+    if (!before?.isDelivered) await notifyOrderDelivered(order);
     res.json(order);
   } catch (error) {
     next(error);

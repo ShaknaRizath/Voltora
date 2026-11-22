@@ -43,7 +43,7 @@ export default function Cart() {
     }
     if (!localStorage.getItem("token")) {
       toast.info("Please sign in to check out.");
-      navigate("/login");
+      navigate("/login", { state: { from: "/cart" } });
       return;
     }
     setCheckingOut(true);

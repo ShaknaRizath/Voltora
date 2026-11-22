@@ -19,6 +19,7 @@ import authRoutes from './routes/authRoutes.js';
 import warrantyRoutes from './routes/warrantyRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import chatRoutes from './routes/chatRoutes.js';
+import notificationRoutes from './routes/notificationRoutes.js';
 
 // Fail fast with a clear message instead of crashing later with a confusing one.
 const missing = ['MONGO_URI', 'JWT_SECRET'].filter((k) => !process.env[k]);
@@ -88,6 +89,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/warranty', warrantyRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Health check
 const health = (req, res) => res.json({ status: 'ok', service: 'Voltora API' });

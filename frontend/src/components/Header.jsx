@@ -2,10 +2,28 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import { AnimatePresence, motion } from "framer-motion";
-import { FiArrowRight, FiMenu, FiSearch, FiShoppingBag, FiUser, FiX } from "react-icons/fi";
+import { FiArrowRight, FiBell, FiMenu, FiSearch, FiShoppingBag, FiUser, FiX } from "react-icons/fi";
 import { API_URL, getRole } from "../config";
 import Logo from "./Logo";
 import useClickOutside from "../hooks/useClickOutside";
+import useBadges, { markAllRead, markRead, refreshBadges } from "../hooks/useBadges";
+
+// Small count bubble used on the nav, the bell and the admin links.
+export const Count = ({ n, className = "" }) =>
+  n > 0 ? (
+    <span className={`inline-grid h-4 min-w-[1rem] place-items-center rounded-full bg-brand-600 px-1 text-[10px] font-semibold leading-none text-white ${className}`}>
+      {n > 9 ? "9+" : n}
+    </span>
+  ) : null;
+
+const ago = (d) => {
+  const m = Math.floor((Date.now() - new Date(d).getTime()) / 60000);
+  if (m < 1) return "Just now";
+  if (m < 60) return `${m} min ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h} h ago`;
+  return `${Math.floor(h / 24)} d ago`;
+};
 
 /* ------------------------------------------------------------------ */
 /* Navigation model                                                    */
@@ -54,13 +72,21 @@ export default function Header() {
   const [openKey, setOpenKey] = useState(null); // nav key | "search" | null
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [bellOpen, setBellOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [products, setProducts] = useState([]);
   const [user, setUser] = useState(readUser);
   const profileRef = useRef(null);
+  const bellRef = useRef(null);
   const searchInputRef = useRef(null);
   const location = useLocation();
   const navigate = useNavigate();
+
+  const { unread, items: notes, pendingRepairs, toDeliver } = useBadges();
+  const isAdmin = getRole() === "admin";
+  // Admins see how many repair requests are waiting. Customers see their unread repair updates.
+  const bellCount = unread + (isAdmin ? pendingRepairs + toDeliver : 0);
+  const careCount = isAdmin ? pendingRepairs : notes.filter((n) => !n.read && n.type === "repair").length;
 
   const cartCount = useSelector((s) => s.cart.cartItems.reduce((n, i) => n + (i.qty || 0), 0));
 
@@ -78,9 +104,12 @@ export default function Header() {
     setOpenKey(null);
     setMobileOpen(false);
     setProfileOpen(false);
+    setBellOpen(false);
+    refreshBadges();
   }, [location]);
 
   useClickOutside(profileRef, () => setProfileOpen(false));
+  useClickOutside(bellRef, () => setBellOpen(false));
 
   // Esc closes menus; lock page scroll behind the mobile menu.
   useEffect(() => {
@@ -216,6 +245,7 @@ export default function Header() {
                 }`}
               >
                 {item.label}
+                {item.key === "care" && <Count n={careCount} className="ml-1.5 align-middle" />}
               </Link>
             ))}
           </nav>
@@ -230,6 +260,82 @@ export default function Header() {
             >
               <FiSearch className={iconCls} strokeWidth={1.75} />
             </button>
+
+            {user && (
+              <div className="relative" ref={bellRef}>
+                <button
+                  onClick={() => {
+                    setBellOpen((o) => !o);
+                    setProfileOpen(false);
+                  }}
+                  aria-label={`Notifications, ${bellCount} new`}
+                  aria-expanded={bellOpen}
+                  className={iconBtn}
+                >
+                  <FiBell className={iconCls} strokeWidth={1.75} />
+                  {bellCount > 0 && <Count n={bellCount} className="absolute -right-0.5 top-1.5 !h-3.5 !min-w-[0.875rem] !text-[9px]" />}
+                </button>
+                <AnimatePresence>
+                  {bellOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 4 }}
+                      transition={{ duration: 0.12 }}
+                      className="fixed inset-x-4 top-12 z-50 overflow-hidden rounded-2xl bg-white shadow-lift ring-1 ring-zinc-200 sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-1 sm:w-80"
+                    >
+                      <div className="flex items-center justify-between px-4 pb-2 pt-3">
+                        <p className="text-sm font-semibold text-zinc-900">Notifications</p>
+                        {unread > 0 && (
+                          <button onClick={markAllRead} className="text-xs font-medium text-brand-600 hover:underline">
+                            Mark all as read
+                          </button>
+                        )}
+                      </div>
+                      {isAdmin && (pendingRepairs > 0 || toDeliver > 0) && (
+                        <div className="mx-2 mb-1 space-y-0.5 rounded-xl bg-zinc-50 p-1">
+                          {pendingRepairs > 0 && (
+                            <Link to="/admin?tab=repairs" className="flex items-center justify-between rounded-lg px-3 py-2 text-sm text-zinc-800 transition hover:bg-zinc-100">
+                              New repair requests <Count n={pendingRepairs} />
+                            </Link>
+                          )}
+                          {toDeliver > 0 && (
+                            <Link to="/admin?tab=orders" className="flex items-center justify-between rounded-lg px-3 py-2 text-sm text-zinc-800 transition hover:bg-zinc-100">
+                              Orders to deliver <Count n={toDeliver} />
+                            </Link>
+                          )}
+                        </div>
+                      )}
+                      <ul className="max-h-80 overflow-y-auto pb-2">
+                        {notes.length === 0 ? (isAdmin && pendingRepairs + toDeliver > 0 ? null : (
+                          <li className="px-4 py-6 text-center text-sm text-zinc-500">You're all caught up.</li>
+                        )) : (
+                          notes.map((n) => (
+                            <li key={n._id}>
+                              <button
+                                onClick={() => {
+                                  markRead(n._id);
+                                  setBellOpen(false);
+                                  if (n.link) navigate(n.link);
+                                }}
+                                className="flex w-full items-start gap-3 px-4 py-2.5 text-left transition hover:bg-zinc-50"
+                              >
+                                <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${n.read ? "bg-transparent" : "bg-brand-600"}`} />
+                                <span className="min-w-0">
+                                  <span className={`block text-sm ${n.read ? "text-zinc-600" : "font-semibold text-zinc-900"}`}>{n.title}</span>
+                                  <span className="block text-xs text-zinc-500">{n.message}</span>
+                                  <span className="mt-0.5 block text-[11px] text-zinc-400">{ago(n.createdAt)}</span>
+                                </span>
+                              </button>
+                            </li>
+                          ))
+                        )}
+                      </ul>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            )}
 
             <div className="relative" ref={profileRef}>
               {user ? (
@@ -263,14 +369,15 @@ export default function Header() {
                       Signed in as <span className="font-medium text-zinc-900">{user.username}</span>
                     </p>
                     {[
-                      ...(getRole() === "admin" ? [["/admin", "Admin"]] : []),
+                      ...(isAdmin ? [["/admin", "Admin"]] : []),
                       ["/dashboard", "Dashboard"],
                       ["/order-history", "Orders"],
                       ["/my-warranties", "My warranties"],
                       ["/profile", "Profile"],
                     ].map(([to, label]) => (
-                      <Link key={to} to={to} className="block rounded-xl px-3 py-2 text-sm text-zinc-700 transition hover:bg-zinc-50">
+                      <Link key={to} to={to} className="flex items-center justify-between rounded-xl px-3 py-2 text-sm text-zinc-700 transition hover:bg-zinc-50">
                         {label}
+                        {to === "/admin" && <Count n={pendingRepairs + toDeliver} />}
                       </Link>
                     ))}
                     <button
@@ -414,6 +521,7 @@ export default function Header() {
                     }`}
                   >
                     {item.label}
+                    {item.key === "care" && <Count n={careCount} className="ml-2 align-middle" />}
                   </Link>
                 </motion.div>
               ))}
@@ -422,7 +530,11 @@ export default function Header() {
               <p className="text-xs text-zinc-500">Account</p>
               {user ? (
                 <>
-                  {getRole() === "admin" && <Link to="/admin" className="block font-semibold text-zinc-900">Admin</Link>}
+                  {isAdmin && (
+                    <Link to="/admin" className="flex items-center gap-2 font-semibold text-zinc-900">
+                      Admin <Count n={pendingRepairs + toDeliver} />
+                    </Link>
+                  )}
                   <Link to="/dashboard" className="block font-semibold text-zinc-900">Dashboard</Link>
                   <Link to="/order-history" className="block font-semibold text-zinc-900">Orders</Link>
                   <Link to="/my-warranties" className="block font-semibold text-zinc-900">My warranties</Link>

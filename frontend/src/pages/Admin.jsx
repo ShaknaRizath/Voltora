@@ -2,6 +2,8 @@ import React from "react";
 import { Link, Navigate, useSearchParams } from "react-router-dom";
 import { FiBox, FiGrid, FiLock, FiPackage, FiShield, FiTool, FiUsers } from "react-icons/fi";
 import { getRole } from "../config";
+import useBadges from "../hooks/useBadges";
+import { Count } from "../components/Header";
 import { EmptyState, PageHeader } from "../components/ui";
 import OverviewTab from "./admin/OverviewTab";
 import ProductsTab from "./admin/ProductsTab";
@@ -22,6 +24,8 @@ const TABS = [
 export default function Admin() {
   const [params, setParams] = useSearchParams();
   const role = getRole();
+  const { pendingRepairs, toDeliver } = useBadges();
+  const badges = { repairs: pendingRepairs, orders: toDeliver };
 
   if (!role) return <Navigate to="/login" replace />;
 
@@ -66,6 +70,7 @@ export default function Admin() {
               >
                 <Icon className="h-4 w-4" strokeWidth={1.75} aria-hidden="true" />
                 {label}
+                <Count n={badges[key]} />
               </button>
             );
           })}

@@ -2,6 +2,7 @@
 import Repair from '../models/Repair.js';
 import { nextSequence } from '../models/Counter.js';
 import { publicPath, removeUpload } from '../middleware/uploadMiddleware.js';
+import { notifyRepairStatus } from '../utils/notify.js';
 import { escapeRegex, pick } from '../middleware/validate.js';
 
 const SORTABLE = ['submittedAt', 'createdAt', 'status', 'repairId', 'customerName', 'productName'];
@@ -151,9 +152,11 @@ export const adminUpdateRepair = async (req, res, next) => {
     }
 
     const oldImage = repair.repairedImage;
+    const oldStatus = repair.status;
     repair.set({ ...updates, updatedAt: new Date() });
     await repair.save(); // enum validation on status runs here
     if (req.file && oldImage) removeUpload(oldImage);
+    if (repair.status !== oldStatus) await notifyRepairStatus(repair); // tell the customer
 
     res.status(200).json(repair);
   } catch (error) {

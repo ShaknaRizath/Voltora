@@ -7,6 +7,7 @@ import { Select } from "../../components/inputs";
 import { Badge, Modal } from "../../components/ui";
 import { IconButton, NothingHere, SearchBox, TableCard, Td, Toolbar } from "./shared";
 import { fmtDate, shortId, useFetch } from "./utils";
+import { refreshBadges } from "../../hooks/useBadges";
 
 const DeliveryBadge = ({ order }) =>
   !order.isPaid ? (
@@ -94,6 +95,7 @@ export default function OrdersTab() {
       );
       setData((list) => list.map((o) => (o._id === order._id ? { ...o, ...res.data } : o)));
       toast.success(res.data.isDelivered ? "Marked as delivered" : "Marked as not delivered");
+      refreshBadges();
     } catch (error) {
       toast.error(error.response?.data?.message || "Couldn't update the order");
     } finally {

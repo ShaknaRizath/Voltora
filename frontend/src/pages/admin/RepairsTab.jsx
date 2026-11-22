@@ -8,6 +8,7 @@ import { Select } from "../../components/inputs";
 import { ConfirmDialog } from "../../components/ui";
 import { IconButton, NothingHere, SearchBox, TableCard, Td, Toolbar } from "./shared";
 import { fmtDate, useFetch } from "./utils";
+import { refreshBadges } from "../../hooks/useBadges";
 
 const STATUSES = ["Pending", "Approved", "In Progress", "Resolved", "Rejected"];
 
@@ -37,6 +38,7 @@ export default function RepairsTab() {
       const res = await axios.put(`${API_URL}/api/repairs/${repair._id}/admin`, { status: next }, { headers: authHeader() });
       setData((list) => list.map((r) => (r._id === repair._id ? { ...r, ...res.data } : r)));
       toast.success(`${repair.repairId} is now ${next}`);
+      refreshBadges();
     } catch (error) {
       toast.error(error.response?.data?.message || "Couldn't update the repair");
     } finally {
@@ -50,6 +52,7 @@ export default function RepairsTab() {
       await axios.delete(`${API_URL}/api/repairs/${toDelete._id}`, { headers: authHeader() });
       setData((list) => list.filter((r) => r._id !== toDelete._id));
       toast.success("Repair deleted");
+      refreshBadges();
       setToDelete(null);
     } catch (error) {
       toast.error(error.response?.data?.message || "Delete failed");

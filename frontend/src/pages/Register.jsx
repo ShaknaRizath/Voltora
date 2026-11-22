@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import axios from "axios";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { FiAtSign, FiCamera, FiLock, FiMail, FiPhone, FiUser } from "react-icons/fi";
 import { API_URL } from "../config";
 import AuthShell from "../components/AuthShell";
@@ -34,6 +34,7 @@ export default function Register() {
   });
 
   const navigate = useNavigate();
+  const location = useLocation();
   const { name, username, email, password, confirmPassword, mobile, profileImage } = formData;
 
   const onChange = (e) => {
@@ -121,7 +122,7 @@ export default function Register() {
         verificationToken,
       });
       setInfo("Account created! Redirecting to login…");
-      setTimeout(() => navigate("/login"), 650);
+      setTimeout(() => navigate("/login", { state: location.state }), 650);
     } catch (err) {
       setError(err.response?.data?.msg || err.response?.data?.message || "Registration failed. Please try again.");
     } finally {
@@ -136,7 +137,7 @@ export default function Register() {
       footer={
         <>
           Already have an account?{" "}
-          <Link to="/login" className="font-semibold text-brand-600 hover:text-brand-700">
+          <Link to="/login" state={location.state} className="font-semibold text-brand-600 hover:text-brand-700">
             Sign in
           </Link>
         </>

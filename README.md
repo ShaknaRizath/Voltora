@@ -25,6 +25,10 @@ Built as a university project, and designed mobile first.
 - Customers see their own registered devices, each with a QR code
 - Staff register in-store sales
 
+**Notifications**
+- Admins see a count of new repair requests and orders waiting for delivery, on the nav, the bell and the admin tabs
+- Customers get a bell notification when a repair changes status (for example done) or an order is delivered, and one click opens it
+
 **Admin dashboard**
 - Overview: revenue, paid orders, open repairs, a 14 day revenue chart, best sellers
 - Products: add, edit and delete with image upload, and set the exact shop order by numbering products
