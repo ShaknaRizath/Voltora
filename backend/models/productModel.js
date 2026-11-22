@@ -6,9 +6,20 @@ const reviewSchema = new mongoose.Schema(
     name: { type: String, required: true, trim: true, maxlength: 60 },
     rating: { type: Number, required: true, min: [1, "Rating must be between 1 and 5"], max: [5, "Rating must be between 1 and 5"] },
     comment: { type: String, required: true, trim: true, maxlength: 1000 },
+    // Set when the review comes from a customer whose order of this product was delivered.
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    verified: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
+
+// Who wrote a review stays private: the public only sees the display name.
+reviewSchema.set("toJSON", {
+  transform: (_doc, ret) => {
+    delete ret.userId;
+    return ret;
+  },
+});
 
 // 📦 Product Schema
 const productSchema = new mongoose.Schema(

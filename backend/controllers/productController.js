@@ -1,5 +1,6 @@
 import Product from "../models/productModel.js";
 import User from "../models/User.js";
+import Order from "../models/orderModel.js";
 import { pick } from "../middleware/validate.js";
 import { removeUpload } from "../middleware/uploadMiddleware.js";
 import { ORDER_SORT, compactOrder, ensureOrder, nextPosition } from "../utils/productOrder.js";
@@ -83,7 +84,27 @@ export const deleteProduct = async (req, res, next) => {
   }
 };
 
-// @desc Add a product review (anyone; signed-in users are named after their account)
+// Reviews are for customers who actually received the product (a paid order that was marked delivered),
+// one review each.
+const reviewStatus = async (product, userId) => {
+  if (product.reviews.some((r) => String(r.userId) === String(userId))) return "reviewed";
+  const delivered = await Order.exists({ userId, isPaid: true, isDelivered: true, "items.product": product._id });
+  return delivered ? "ok" : "not_delivered";
+};
+
+// @desc Can the signed-in customer review this product?
+// @route GET /api/products/:id/review-status   -> { status: "ok" | "not_delivered" | "reviewed" }
+export const getReviewStatus = async (req, res, next) => {
+  try {
+    const product = await Product.findById(req.params.id, "reviews");
+    if (!product) return res.status(404).json({ message: "Product not found" });
+    res.json({ status: await reviewStatus(product, req.user.userId) });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc Add a product review (signed-in customers who received the product)
 // @route POST /api/products/:id/reviews
 export const addProductReview = async (req, res, next) => {
   try {
@@ -97,14 +118,12 @@ export const addProductReview = async (req, res, next) => {
     }
     if (!comment) return res.status(400).json({ message: "Please write a comment" });
 
-    // A signed-in reviewer can't impersonate someone else.
-    let name = String(req.body.name || "Guest").trim().slice(0, 60) || "Guest";
-    if (req.user) {
-      const user = await User.findById(req.user.userId).select("username");
-      if (user) name = user.username;
-    }
+    const status = await reviewStatus(product, req.user.userId);
+    if (status === "reviewed") return res.status(409).json({ message: "You have already reviewed this product" });
+    if (status !== "ok") return res.status(403).json({ message: "Only customers who have received this product can review it" });
 
-    product.reviews.push({ name, rating, comment });
+    const user = await User.findById(req.user.userId).select("username");
+    product.reviews.push({ name: user?.username || "Customer", rating, comment, userId: req.user.userId, verified: true });
     await product.save();
     res.json(product);
   } catch (error) {
