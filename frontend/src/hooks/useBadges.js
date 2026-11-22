@@ -84,6 +84,19 @@ export const markAllRead = async () => {
   }
 };
 
+// Admin: "I've looked at the new repairs / orders", so their numbers clear.
+export const markSeen = async (...sections) => {
+  const patch = {};
+  if (sections.includes("repairs")) patch.pendingRepairs = 0;
+  if (sections.includes("orders")) patch.toDeliver = 0;
+  set({ ...state, ...patch });
+  try {
+    await Promise.all(sections.map((section) => axios.post(`${API_URL}/api/admin/seen`, { section }, { headers: authHeader() })));
+  } catch {
+    refreshBadges();
+  }
+};
+
 export default function useBadges() {
   return useSyncExternalStore(subscribe, () => state);
 }

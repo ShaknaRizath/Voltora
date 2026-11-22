@@ -18,13 +18,28 @@ const warrantyStatus = (w) => {
 };
 
 // GET /api/admin/counts   (small and cheap: polled by the header badges)
-export const getCounts = async (_req, res, next) => {
+// Numbers are what is NEW since this admin last opened that section, so they clear once looked at.
+export const getCounts = async (req, res, next) => {
   try {
+    const me = await User.findById(req.user.userId, 'adminSeen').lean();
+    const since = (key) => me?.adminSeen?.[key] || new Date(0);
     const [pendingRepairs, toDeliver] = await Promise.all([
-      Repair.countDocuments({ status: 'Pending' }),
-      Order.countDocuments({ isPaid: true, isDelivered: false }),
+      Repair.countDocuments({ status: 'Pending', submittedAt: { $gt: since('repairs') } }),
+      Order.countDocuments({ isPaid: true, isDelivered: false, paidAt: { $gt: since('orders') } }),
     ]);
     res.json({ pendingRepairs, toDeliver });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// POST /api/admin/seen   { section: 'repairs' | 'orders' }
+export const markSeen = async (req, res, next) => {
+  try {
+    const { section } = req.body;
+    if (!['repairs', 'orders'].includes(section)) return res.status(400).json({ message: 'Section must be repairs or orders' });
+    await User.updateOne({ _id: req.user.userId }, { $set: { [`adminSeen.${section}`]: new Date() } });
+    res.json({ ok: true });
   } catch (error) {
     next(error);
   }

@@ -29,6 +29,8 @@ const UserSchema = new mongoose.Schema(
     mobile: { type: String, required: [true, 'Mobile number is required'], trim: true, maxlength: 20 },
     // Only ever set server-side (see seedAdmin.js). Clients can never choose their own role.
     role: { type: String, enum: ['user', 'admin'], default: 'user' },
+    // When an admin last looked at new repairs / orders (drives the badge numbers, see adminController.getCounts).
+    adminSeen: { repairs: Date, orders: Date },
     profileImage: { type: String }, // Base64 encoded string
 
     // Password-reset code (stored hashed, short-lived, attempt-limited). Never selected by default.

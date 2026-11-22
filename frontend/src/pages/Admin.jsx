@@ -1,8 +1,8 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Link, Navigate, useSearchParams } from "react-router-dom";
 import { FiBox, FiGrid, FiLock, FiPackage, FiShield, FiTool, FiUsers } from "react-icons/fi";
 import { getRole } from "../config";
-import useBadges from "../hooks/useBadges";
+import useBadges, { markSeen } from "../hooks/useBadges";
 import { Count } from "../components/Header";
 import { EmptyState, PageHeader } from "../components/ui";
 import OverviewTab from "./admin/OverviewTab";
@@ -26,6 +26,13 @@ export default function Admin() {
   const role = getRole();
   const { pendingRepairs, toDeliver } = useBadges();
   const badges = { repairs: pendingRepairs, orders: toDeliver };
+
+  // Looking at the Repairs or Orders tab counts as seeing what is new there, so its number clears.
+  const tabKey = params.get("tab");
+  const onTabCount = badges[tabKey] || 0;
+  useEffect(() => {
+    if (role === "admin" && onTabCount > 0) markSeen(tabKey);
+  }, [role, tabKey, onTabCount]);
 
   if (!role) return <Navigate to="/login" replace />;
 

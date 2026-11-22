@@ -6,12 +6,12 @@ import { FiArrowRight, FiBell, FiMenu, FiSearch, FiShoppingBag, FiUser, FiX } fr
 import { API_URL, getRole } from "../config";
 import Logo from "./Logo";
 import useClickOutside from "../hooks/useClickOutside";
-import useBadges, { markAllRead, markRead, refreshBadges } from "../hooks/useBadges";
+import useBadges, { markAllRead, markRead, markSeen, refreshBadges } from "../hooks/useBadges";
 
 // Small count bubble used on the nav, the bell and the admin links.
 export const Count = ({ n, className = "" }) =>
   n > 0 ? (
-    <span className={`inline-grid h-4 min-w-[1rem] place-items-center rounded-full bg-brand-600 px-1 text-[10px] font-semibold leading-none text-white ${className}`}>
+    <span className={`inline-grid h-4 min-w-[1rem] place-items-center rounded-full bg-zinc-950 px-1 text-[10px] font-semibold leading-none text-white ${className}`}>
       {n > 9 ? "9+" : n}
     </span>
   ) : null;
@@ -73,6 +73,7 @@ export default function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [bellOpen, setBellOpen] = useState(false);
+  const [snap, setSnap] = useState(null); // what was new when the bell was opened, kept while it stays open
   const [searchTerm, setSearchTerm] = useState("");
   const [products, setProducts] = useState([]);
   const [user, setUser] = useState(readUser);
@@ -107,6 +108,15 @@ export default function Header() {
     setBellOpen(false);
     refreshBadges();
   }, [location]);
+
+  useEffect(() => {
+    if (!bellOpen) setSnap(null);
+  }, [bellOpen]);
+
+  // Visiting the page a notification points to counts as seeing it.
+  useEffect(() => {
+    notes.filter((n) => !n.read && n.link === location.pathname).forEach((n) => markRead(n._id));
+  }, [notes, location.pathname]);
 
   useClickOutside(profileRef, () => setProfileOpen(false));
   useClickOutside(bellRef, () => setBellOpen(false));
@@ -201,6 +211,23 @@ export default function Header() {
     navigate("/login");
   };
 
+  // Opening the bell counts as seeing everything: the numbers clear, but the items stay
+  // highlighted until it is closed so you can still tell what was new.
+  const toggleBell = () => {
+    setProfileOpen(false);
+    if (bellOpen) return setBellOpen(false);
+    setSnap({
+      pendingRepairs: isAdmin ? pendingRepairs : 0,
+      toDeliver: isAdmin ? toDeliver : 0,
+      ids: new Set(notes.filter((n) => !n.read).map((n) => n._id)),
+    });
+    setBellOpen(true);
+    if (unread > 0) markAllRead();
+    if (isAdmin && pendingRepairs + toDeliver > 0) markSeen("repairs", "orders");
+  };
+  const isNew = (n) => (snap ? snap.ids.has(n._id) : !n.read);
+  const shown = snap || { pendingRepairs, toDeliver };
+
   const isActive = (item) => item.match(location.pathname, location.hash);
   const flyout = openKey && openKey !== "search" ? flyouts[openKey] : null;
   const panelOpen = Boolean(flyout) || openKey === "search";
@@ -264,10 +291,7 @@ export default function Header() {
             {user && (
               <div className="relative" ref={bellRef}>
                 <button
-                  onClick={() => {
-                    setBellOpen((o) => !o);
-                    setProfileOpen(false);
-                  }}
+                  onClick={toggleBell}
                   aria-label={`Notifications, ${bellCount} new`}
                   aria-expanded={bellOpen}
                   className={iconBtn}
@@ -286,28 +310,23 @@ export default function Header() {
                     >
                       <div className="flex items-center justify-between px-4 pb-2 pt-3">
                         <p className="text-sm font-semibold text-zinc-900">Notifications</p>
-                        {unread > 0 && (
-                          <button onClick={markAllRead} className="text-xs font-medium text-brand-600 hover:underline">
-                            Mark all as read
-                          </button>
-                        )}
                       </div>
-                      {isAdmin && (pendingRepairs > 0 || toDeliver > 0) && (
+                      {isAdmin && (shown.pendingRepairs > 0 || shown.toDeliver > 0) && (
                         <div className="mx-2 mb-1 space-y-0.5 rounded-xl bg-zinc-50 p-1">
-                          {pendingRepairs > 0 && (
+                          {shown.pendingRepairs > 0 && (
                             <Link to="/admin?tab=repairs" className="flex items-center justify-between rounded-lg px-3 py-2 text-sm text-zinc-800 transition hover:bg-zinc-100">
-                              New repair requests <Count n={pendingRepairs} />
+                              New repair requests <Count n={shown.pendingRepairs} />
                             </Link>
                           )}
-                          {toDeliver > 0 && (
+                          {shown.toDeliver > 0 && (
                             <Link to="/admin?tab=orders" className="flex items-center justify-between rounded-lg px-3 py-2 text-sm text-zinc-800 transition hover:bg-zinc-100">
-                              Orders to deliver <Count n={toDeliver} />
+                              New orders to deliver <Count n={shown.toDeliver} />
                             </Link>
                           )}
                         </div>
                       )}
                       <ul className="max-h-80 overflow-y-auto pb-2">
-                        {notes.length === 0 ? (isAdmin && pendingRepairs + toDeliver > 0 ? null : (
+                        {notes.length === 0 ? (isAdmin && shown.pendingRepairs + shown.toDeliver > 0 ? null : (
                           <li className="px-4 py-6 text-center text-sm text-zinc-500">You're all caught up.</li>
                         )) : (
                           notes.map((n) => (
@@ -320,9 +339,9 @@ export default function Header() {
                                 }}
                                 className="flex w-full items-start gap-3 px-4 py-2.5 text-left transition hover:bg-zinc-50"
                               >
-                                <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${n.read ? "bg-transparent" : "bg-brand-600"}`} />
+                                <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${isNew(n) ? "bg-zinc-950" : "bg-transparent"}`} />
                                 <span className="min-w-0">
-                                  <span className={`block text-sm ${n.read ? "text-zinc-600" : "font-semibold text-zinc-900"}`}>{n.title}</span>
+                                  <span className={`block text-sm ${isNew(n) ? "font-semibold text-zinc-900" : "text-zinc-600"}`}>{n.title}</span>
                                   <span className="block text-xs text-zinc-500">{n.message}</span>
                                   <span className="mt-0.5 block text-[11px] text-zinc-400">{ago(n.createdAt)}</span>
                                 </span>

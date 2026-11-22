@@ -5,6 +5,7 @@ import upload from '../middleware/uploadMiddleware.js';
 import {
   getStats,
   getCounts,
+  markSeen,
   listAllOrders,
   setDelivered,
   listUsers,
@@ -23,6 +24,7 @@ router.use(verifyToken, isAdmin);
 router.param('id', validateObjectId);
 
 router.get('/counts', getCounts);
+router.post('/seen', markSeen);
 router.get('/stats', getStats);
 
 router.get('/orders', listAllOrders);
