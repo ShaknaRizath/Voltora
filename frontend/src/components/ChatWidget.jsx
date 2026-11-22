@@ -21,12 +21,17 @@ export default function ChatWidget() {
     const content = (text ?? input).trim();
     if (!content || loading) return;
 
+    const history = messages
+      .filter((m) => !m.error)
+      .slice(-6)
+      .map((m) => ({ role: m.sender === "user" ? "user" : "assistant", content: m.text }));
+
     setMessages((prev) => [...prev, { text: content, sender: "user" }]);
     setInput("");
     setLoading(true);
 
     try {
-      const res = await axios.post(`${API_URL}/api/chat`, { message: content });
+      const res = await axios.post(`${API_URL}/api/chat`, { message: content, history });
       setMessages((prev) => [...prev, { text: res.data.reply, sender: "bot" }]);
     } catch (err) {
       setMessages((prev) => [
